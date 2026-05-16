@@ -13,7 +13,7 @@
     "test:ch": "npx playwright test --project=chromium",
     "test:debug": "npx playwright test --debug",
     "test:codegen": "npx playwright codegen",
-    "generate": "tsx generate-test-case-openai/generate-test-uso.ts"
+    "generate": "tsx generate-test-case-openai/main.ts"
   },
   "keywords": [],
   "author": "",

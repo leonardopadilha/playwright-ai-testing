@@ -11,3 +11,14 @@ export function readMarkdown(filePath: string): string {
     const content = fs.readFileSync(absolutePath, 'utf-8');
     return content.trim();
 }
+
+export function saveMarkdown(filePath: string, content: string): void {
+    const absolutePath = path.resolve(filePath);
+    const dir = path.dirname(absolutePath);
+
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+    }
+
+    fs.writeFileSync(absolutePath, content, 'utf-8');
+}
