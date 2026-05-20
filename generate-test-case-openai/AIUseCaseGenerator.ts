@@ -5,6 +5,7 @@ import { readMarkdown, saveMarkdown } from '../utils/readMarkdown';
 dotenv.config();
 
 const MODELO_OPENAI = 'gpt-3.5-turbo'
+const MODELO_OPENAI_REFINADO = 'ft:gpt-4o-mini-2024-07-18:student:ai-testing:DhOg5msd'
 
 const client = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
@@ -31,7 +32,7 @@ export class AIUseCaseGenerator {
         `
     
         const response = await client.chat.completions.create({
-            model: MODELO_OPENAI,
+            model: MODELO_OPENAI_REFINADO,
             messages: [
                 { role: 'system', content: sistemPrompt },
                 { role: 'user', content: userPrompt }
