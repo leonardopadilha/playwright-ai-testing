@@ -144,3 +144,8 @@ vite.config.ts.timestamp-*
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+
+# AI generated scripts (mantém a pasta, ignora os artefatos)
+generate-test-case-openai/scripts_gerados/*
+!generate-test-case-openai/scripts_gerados/.gitkeep
+script_temp_ia.ts

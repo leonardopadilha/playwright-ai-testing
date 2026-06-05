@@ -1,44 +1,32 @@
-import OpenAI from 'openai';
-import dotenv from 'dotenv';
-import { readMarkdown, saveMarkdown } from '../utils/readMarkdown';
+import { runAssistantTurn } from './threadRunner';
+import { MODELO_GPT_4 } from './tools';
 
-dotenv.config();
-
-const MODELO_OPENAI = 'gpt-3.5-turbo'
-const MODELO_OPENAI_REFINADO = 'ft:gpt-4o-mini-2024-07-18:student:ai-testing:DhOg5msd'
-
-const client = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-});
+export interface UseCaseRequest {
+    assistantId: string;
+    threadId: string;
+    pedidoUsuario: string;
+    model?: string;
+}
 
 export class AIUseCaseGenerator {
-    
-    async gerar_caso_uso() {
-        const document = readMarkdown('docs/info-empresa/explicacao-casos.md');
-    
-        const sistemPrompt = `
-            Você é um Analista de Qualidade Sênior experiente em testes funcionais de software.
-    
-            Sua tarefa é criar um documento de casos de uso. Você deve adotar o padrão abaixo para gerar
-            seu caso de uso: 
-            
-            ${document}
-    
-            Considere os dados de entrada sugeridos pelo usuário.
-        `
-    
+    async gerar_caso_uso(req: UseCaseRequest): Promise<string> {
         const userPrompt = `
-            Gere um caso de uso para o Carlos que deseja realizar cadastro na plataforma Hub de Leitura.
-        `
-    
-        const response = await client.chat.completions.create({
-            model: MODELO_OPENAI_REFINADO,
-            messages: [
-                { role: 'system', content: sistemPrompt },
-                { role: 'user', content: userPrompt }
-            ],
+            Consulte os documentos anexados (especialmente "explicacao-casos.md"
+            e "resumo-empresa.md") via file_search e gere UM caso de uso completo
+            para a seguinte solicitação:
+
+            "${req.pedidoUsuario}"
+
+            Siga estritamente o formato de saída descrito em
+            "explicacao-casos.md". Retorne apenas o caso de uso em Markdown,
+            sem comentários adicionais.
+        `;
+
+        return runAssistantTurn({
+            threadId: req.threadId,
+            assistantId: req.assistantId,
+            userPrompt,
+            model: req.model ?? MODELO_GPT_4,
         });
-    
-        return response.choices[0].message.content
     }
 }
