@@ -1,34 +1,40 @@
-import OpenAI from 'openai';
-import dotenv from 'dotenv';
+import { runAssistantTurn } from './threadRunner';
+import { MODELO_GPT_4 } from './tools';
 
-dotenv.config();
-
-const MODELO_OPENAI = 'gpt-3.5-turbo'
-
-const client = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-});
+export interface TestScenarioRequest {
+    assistantId: string;
+    threadId: string;
+    casoUso: string;
+    model?: string;
+}
 
 export class AITestScenarioGenerator {
+    async gerar_cenario_teste(req: TestScenarioRequest): Promise<string> {
+        const userPrompt = `
+            Considere o caso de uso gerado na mensagem anterior desta thread:
 
-    async gerar_cenario_teste(casoUso: string | null) {
-        const systemPrompt = `
-            Você é um especialista em desenvolver cenários de teste para validar uma aplicação web, quanto sua
-            navegação. Para isso, considere o caso de uso destacado em: ${casoUso}.
+            ${req.casoUso}
 
-            Seu caso de teste deve fornecer dados suficientes para validar uma aplicação HTML, CSS e JS para que
-            possa ser implementado usando TypeScript e Playwright. 
+            Consulte os documentos da empresa (file_search) e gere uma lista
+            organizada de CENÁRIOS DE TESTE (caminho feliz + caminhos alternativos
+            + casos de erro) suficientes para validar a aplicação web em
+            HTML/CSS/JS via Playwright + TypeScript.
 
-            Não gere código de automação.
-        `
+            Estrutura esperada (Markdown):
+            - Pré-condições
+            - Cenário 1: <título>
+                - Passos
+                - Resultado esperado
+            - Cenário 2: ...
 
-        const resposta = await client.chat.completions.create({
-            model: MODELO_OPENAI,
-            messages: [
-                { role: 'system', content: systemPrompt }
-            ],
-        })
+            NÃO gere código de automação. Apenas a especificação dos cenários.
+        `;
 
-        return resposta.choices[0].message.content
+        return runAssistantTurn({
+            threadId: req.threadId,
+            assistantId: req.assistantId,
+            userPrompt,
+            model: req.model ?? MODELO_GPT_4,
+        });
     }
 }

@@ -1,41 +1,61 @@
-import OpenAI from 'openai';
-import dotenv from 'dotenv';
-import { readMarkdown } from '../utils/readMarkdown';
+import { runAssistantTurn } from './threadRunner';
+import { MODELO_GPT_4 } from './tools';
 
-dotenv.config();
-
-const MODELO_OPENAI = 'gpt-3.5-turbo'
-
-const client = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-});
+export interface PlaywrightScriptRequest {
+    assistantId: string;
+    threadId: string;
+    casoUso: string;
+    cenarioTeste: string;
+    baseUrl?: string;
+    model?: string;
+}
 
 export class AIPlaywrightGenerator {
-
-    async gerar_script_teste(casoUso: string | null, testeCase: string | null) {
-        const document = readMarkdown('docs/info-empresa/resumo-empresa.md');
-
-        const systemPrompt = `
-            Você é um Analista de Qualidade Sênior especialista em gerar scripts de teste para elaboração de casos
-            e cenários de teste. Considere o contexto da empresa disponível em: ${document}
-
-            Seu cenário de teste deve fornecer um script em Playwright. Além disso, seu código deve ser escrito em TypeScript
-            e deve priorizar a legibilidade e a manutenibilidade do código.
-        `
+    async gerar_script_teste(req: PlaywrightScriptRequest): Promise<string> {
+        const baseUrl = req.baseUrl ?? 'http://localhost:3000';
 
         const userPrompt = `
-            Considere o caso de uso: ${casoUso} e o cenário de teste: ${testeCase} para gerar um script de teste.
-            Crie um script para gerar um teste automatizado para ambos.
-        `
+            Com base no caso de uso e nos cenários de teste já discutidos nesta
+            mesma thread, gere um ÚNICO arquivo de teste Playwright em
+            TypeScript que cubra todos os cenários listados.
 
-        const resposta = await client.chat.completions.create({
-            model: MODELO_OPENAI,
-            messages: [
-                { role: 'system', content: systemPrompt },
-                { role: 'user', content: userPrompt }
-            ]
-        })
+            Requisitos OBRIGATÓRIOS do script:
+            - Importar com: import { test, expect } from '@playwright/test';
+            - Cada cenário deve virar um test() independente, isolado por hooks
+              test.beforeEach / test.afterEach quando necessário.
+            - Usar locators recomendados pelo Playwright (getByRole, getByLabel,
+              getByPlaceholder, getByTestId) ao invés de seletores CSS frágeis.
+            - Usar expect() com auto-waits (NÃO usar waitForTimeout).
+            - URL base: ${baseUrl} (pode ser referenciada como '/').
+            - Sem comentários redundantes; comentar apenas intenções não óbvias.
+            - Sem fences markdown (sem ${'```'}typescript). Sem texto fora do
+              código. A primeira linha do output deve ser o import.
 
-        return resposta.choices[0].message.content
+            Lembre dos documentos do projeto via file_search se precisar
+            confirmar nomes de telas, campos ou regras de negócio.
+
+            Recapitulando o caso de uso:
+            ${req.casoUso}
+
+            Recapitulando os cenários de teste:
+            ${req.cenarioTeste}
+        `;
+
+        const raw = await runAssistantTurn({
+            threadId: req.threadId,
+            assistantId: req.assistantId,
+            userPrompt,
+            model: req.model ?? MODELO_GPT_4,
+        });
+
+        return stripMarkdownFences(raw);
     }
+}
+
+function stripMarkdownFences(content: string): string {
+    const trimmed = content.trim();
+    const fenceMatch = trimmed.match(
+        /^```(?:typescript|ts|javascript|js)?\s*\n([\s\S]*?)\n```\s*$/i,
+    );
+    return fenceMatch ? fenceMatch[1].trim() : trimmed;
 }
